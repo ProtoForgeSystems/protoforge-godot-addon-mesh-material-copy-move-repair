@@ -133,6 +133,21 @@ func _run(mode: int, from: String, to: String) -> void:
 		_busy = true
 		report = Executor.apply(plan.actions)
 		_busy = false
+
+	# Report BEFORE handing anything to the importer. A reimport logs errors of its own -- a
+	# glTF whose buffer is genuinely still missing, say -- and those read as unexplained noise
+	# when they arrive ahead of the lines saying what was done and what was skipped. Printing
+	# first puts them in causal order: here is what changed, then here is what the engine made
+	# of it.
+	print_rich("[b]glTF Copy/Move/Repair[/b] %s %s" % [Plan.Mode.keys()[mode].to_lower(), to])
+	for line in report:
+		print("  " + line)
+	for note in plan.notes:
+		print("  note: " + note)
+	for s in found.skipped:
+		print("  skipped %s — %s" % [s.uri, s.reason])
+
+	if not plan.actions.is_empty():
 		# Only files Godot actually imports have a .import sibling. Handing it anything else --
 		# a .bin, notably -- makes it log "BUG: File queued for import, but can't be imported,
 		# importer for type '' not found" on every single move, which reads as this addon being
@@ -144,11 +159,3 @@ func _run(mode: int, from: String, to: String) -> void:
 				efs.update_file(path)
 		if not importable.is_empty():
 			efs.reimport_files(importable)
-
-	print_rich("[b]Sidecar[/b] %s %s" % [Plan.Mode.keys()[mode].to_lower(), to])
-	for line in report:
-		print("  " + line)
-	for note in plan.notes:
-		print("  note: " + note)
-	for s in found.skipped:
-		print("  skipped %s — %s" % [s.uri, s.reason])

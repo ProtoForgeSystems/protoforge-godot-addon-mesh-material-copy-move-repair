@@ -9,4 +9,4 @@ func _popup_menu(paths: PackedStringArray) -> void:
 	if not handler.is_valid() or not handler.call("any_handled", paths):
 		return
 	add_context_menu_item("Copy with dependencies…", func(p): handler.call("copy", p))
-	add_context_menu_item("Repair sidecars", func(p): handler.call("repair", p))
+	add_context_menu_item("Repair mesh/model", func(p): handler.call("repair", p))
