@@ -36,4 +36,5 @@ for t in test_resolver_base test_gltf_resolver; do
         status=1
     fi
 done
+"$ROOT/tests/import_probe.sh" "$GODOT_BIN" || status=1
 exit $status
