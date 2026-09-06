@@ -59,7 +59,13 @@ func _on_menu(what: String, paths: PackedStringArray) -> Variant:
 					return true
 			return false
 		"copy":
+			if paths.is_empty():
+				return null
 			_pending = paths
+			# Open where the asset lives, not at res://. A copy almost always lands in a
+			# sibling folder, and starting at the project root makes the user navigate back
+			# down to where they already were.
+			_dialog.current_dir = paths[0].get_base_dir()
 			_dialog.popup_centered_ratio(0.5)
 		"repair":
 			for p in paths:
