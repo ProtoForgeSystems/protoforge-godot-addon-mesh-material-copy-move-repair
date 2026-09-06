@@ -25,11 +25,11 @@ static func build(
 	match mode:
 		Mode.MOVE:
 			# The dock already relocated the primary; only its poisoned .import needs fixing.
-			out.actions.append(_action(Op.RECONCILE, primary_from, primary_to, true))
+			out.actions.append(_action(Op.RECONCILE, primary_from, primary_to, true, true))
 		Mode.COPY:
-			out.actions.append(_action(Op.COPY, primary_from, primary_to, false))
+			out.actions.append(_action(Op.COPY, primary_from, primary_to, false, true))
 		Mode.REPAIR:
-			out.actions.append(_action(Op.RECONCILE, primary_from, primary_from, true))
+			out.actions.append(_action(Op.RECONCILE, primary_from, primary_from, true, true))
 
 	for s in sidecars:
 		# Repair moves nothing, so it needs no destination at all.
@@ -60,8 +60,8 @@ static func build(
 	return out
 
 
-static func _action(op: int, from: String, to: String, keep_uid: bool) -> Dictionary:
-	return {"op": op, "from": from, "to": to, "keep_uid": keep_uid}
+static func _action(op: int, from: String, to: String, keep_uid: bool, primary := false) -> Dictionary:
+	return {"op": op, "from": from, "to": to, "keep_uid": keep_uid, "primary": primary}
 
 
 ## A sidecar's path relative to the asset's own directory, or "" when it lives outside it.

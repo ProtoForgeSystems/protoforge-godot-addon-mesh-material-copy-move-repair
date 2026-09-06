@@ -64,10 +64,18 @@ func _init() -> void:
 
 	# Ordering: the primary is handed to the editor last so its dependencies exist first.
 	var ordered: PackedStringArray = Executor.touched_paths([
-		{"op": Plan.Op.RECONCILE, "from": src.path_join("m.gltf"), "to": dst.path_join("m.gltf"), "keep_uid": true},
+		{"op": Plan.Op.RECONCILE, "from": src.path_join("m.gltf"), "to": dst.path_join("m.gltf"), "keep_uid": true, "primary": true},
 		{"op": Plan.Op.MOVE, "from": src.path_join("m.bin"), "to": dst.path_join("m.bin"), "keep_uid": true},
 	])
 	_check(ordered.size() == 2 and ordered[1].ends_with("m.gltf"), "primary reimports last")
+
+	# ...and on a COPY, where the primary is a COPY exactly like its sidecars. Keying the order
+	# on RECONCILE put it first, and Godot then imported the .gltf before its textures existed.
+	var copy_order: PackedStringArray = Executor.touched_paths([
+		{"op": Plan.Op.COPY, "from": src.path_join("m.gltf"), "to": dst.path_join("m.gltf"), "keep_uid": false, "primary": true},
+		{"op": Plan.Op.COPY, "from": src.path_join("t.png"), "to": dst.path_join("t.png"), "keep_uid": false},
+	])
+	_check(copy_order.size() == 2 and copy_order[1].ends_with("m.gltf"), "primary reimports last on a COPY too")
 
 	# An existing destination is never clobbered, and on a MOVE the source must survive --
 	# otherwise one ordinary accident destroys both copies.

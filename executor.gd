@@ -20,13 +20,19 @@ static func apply(actions: Array) -> Array:
 	return report
 
 
-## Destination paths the caller should hand to EditorFileSystem, with the reconciled primary last
-## so its dependencies are on disk before it is parsed.
+## Destination paths the caller should hand to EditorFileSystem, with the asset itself LAST so
+## its dependencies are on disk before Godot parses it.
+##
+## Keyed on the primary flag, never on the op. On a COPY the asset is a COPY exactly like its
+## sidecars, so keying on RECONCILE put it FIRST and Godot imported the .gltf before its
+## textures existed as resources -- "Failed loading resource", once per texture, on every single
+## copy. A move looked clean only because its primary happens to be a RECONCILE. Measured in
+## the editor, 2026-09-06.
 static func touched_paths(actions: Array) -> PackedStringArray:
 	var out := PackedStringArray()
 	var primary := PackedStringArray()
 	for a in actions:
-		if a.op == Plan.Op.RECONCILE:
+		if a.get("primary", false):
 			primary.append(a.to)
 		else:
 			out.append(a.to)

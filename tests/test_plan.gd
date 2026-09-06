@@ -40,6 +40,7 @@ func _init() -> void:
 	_check(primary.op == Plan.Op.RECONCILE, "move: primary is reconcile-only, the dock already moved it")
 	_check(primary.to == "res://dest/m.gltf", "move: primary reconciles at its new path")
 	_check(primary.keep_uid, "move: primary keeps its uid")
+	_check(primary.get("primary", false), "move: the asset itself is flagged primary, so it reimports last")
 	var bin: Dictionary = _find(got.actions, "res://kit/m.bin")
 	_check(bin.op == Plan.Op.MOVE, "move: unshared sidecar moves")
 	_check(bin.to == "res://dest/m.bin", "move: sidecar lands beside the primary, same filename")
