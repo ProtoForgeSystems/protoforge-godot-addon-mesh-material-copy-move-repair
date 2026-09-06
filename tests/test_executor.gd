@@ -95,10 +95,11 @@ func _init() -> void:
 	_check(rec_text.contains(dst.path_join("lone.png")), "reconcile repointed the .import at the new path")
 	_check(rec_text.contains("uid://lone1"), "reconcile kept the uid")
 
-	# A RECONCILE with no .import to fix is reported, not swallowed.
+	# A RECONCILE with no .import to fix says nothing -- a .bin is not repairable, and a missing
+	# sidecar is already reported separately by the resolver as "missing file".
 	Fixture.write_blob("dst/bare.png")
 	var bare: Array = Executor.apply([{"op": Plan.Op.RECONCILE, "from": src.path_join("bare.png"), "to": dst.path_join("bare.png"), "keep_uid": true}])
-	_check(bare.size() == 1 and bare[0].contains("no .import"), "a reconcile with no .import is reported")
+	_check(bare.is_empty(), "a reconcile with no .import says nothing — a .bin is not repairable")
 
 	Fixture.rm_rf(Fixture.DIR)
 	print("executor tests: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))

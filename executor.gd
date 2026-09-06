@@ -10,13 +10,19 @@ const Plan := preload("res://addons/sidecar/plan.gd")
 static func apply(actions: Array) -> Array:
 	var report := []
 	for a in actions:
+		var line := ""
 		match a.op:
 			Plan.Op.MOVE:
-				report.append(_transfer(a, true))
+				line = _transfer(a, true)
 			Plan.Op.COPY:
-				report.append(_transfer(a, false))
+				line = _transfer(a, false)
 			Plan.Op.RECONCILE:
-				report.append(_reconcile_only(a))
+				line = _reconcile_only(a)
+		# An empty line means "nothing to say" -- a .bin has no .import and never will, so a
+		# repair reporting "no .import to reconcile" for it every time is noise about a file
+		# that is not repairable in the first place.
+		if not line.is_empty():
+			report.append(line)
 	return report
 
 
@@ -83,10 +89,13 @@ static func _carry_import(a: Dictionary, remove_source: bool) -> String:
 	return ""
 
 
+## Returns "" when there is nothing to reconcile. A .bin has no .import and never will; the
+## resolver already reports a sidecar that is genuinely MISSING, so silence here is the right
+## answer rather than a line about every unimportable file on every repair.
 static func _reconcile_only(a: Dictionary) -> String:
 	var import_path: String = a.to + ".import"
 	if not FileAccess.file_exists(import_path):
-		return "skipped %s — no .import to reconcile" % a.to
+		return ""
 	var text := ImportFile.reconcile(FileAccess.get_file_as_string(import_path), a.from, a.to, a.keep_uid)
 	var err := _write(import_path, text)
 	if err != OK:
