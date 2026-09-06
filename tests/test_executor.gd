@@ -69,6 +69,29 @@ func _init() -> void:
 	])
 	_check(ordered.size() == 2 and ordered[1].ends_with("m.gltf"), "primary reimports last")
 
+	# An existing destination is never clobbered, and on a MOVE the source must survive --
+	# otherwise one ordinary accident destroys both copies.
+	Fixture.write_raw("src/keep.png", "SOURCE")
+	Fixture.write_raw("dst/keep.png", "PRECIOUS")
+	var clash: Array = Executor.apply([{"op": Plan.Op.MOVE, "from": src.path_join("keep.png"), "to": dst.path_join("keep.png"), "keep_uid": true}])
+	_check(FileAccess.get_file_as_string(dst.path_join("keep.png")) == "PRECIOUS", "an existing destination is not overwritten")
+	_check(FileAccess.file_exists(src.path_join("keep.png")), "a skipped move does not delete its source")
+	_check(clash.size() == 1 and clash[0].contains("already exists"), "the collision is reported (%s)" % clash[0])
+
+	# RECONCILE through apply(), which the touched_paths ordering check alone never exercises.
+	Fixture.write_blob("dst/lone.png")
+	Fixture.write_raw("dst/lone.png.import", _import_for(src.path_join("lone.png"), "uid://lone1"))
+	var rec: Array = Executor.apply([{"op": Plan.Op.RECONCILE, "from": src.path_join("lone.png"), "to": dst.path_join("lone.png"), "keep_uid": true}])
+	var rec_text := FileAccess.get_file_as_string(dst.path_join("lone.png.import"))
+	_check(rec.size() == 1 and rec[0].begins_with("reconciled"), "reconcile-in-place is reported")
+	_check(rec_text.contains(dst.path_join("lone.png")), "reconcile repointed the .import at the new path")
+	_check(rec_text.contains("uid://lone1"), "reconcile kept the uid")
+
+	# A RECONCILE with no .import to fix is reported, not swallowed.
+	Fixture.write_blob("dst/bare.png")
+	var bare: Array = Executor.apply([{"op": Plan.Op.RECONCILE, "from": src.path_join("bare.png"), "to": dst.path_join("bare.png"), "keep_uid": true}])
+	_check(bare.size() == 1 and bare[0].contains("no .import"), "a reconcile with no .import is reported")
+
 	Fixture.rm_rf(Fixture.DIR)
 	print("executor tests: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)

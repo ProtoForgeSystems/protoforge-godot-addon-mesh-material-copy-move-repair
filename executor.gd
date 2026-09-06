@@ -37,36 +37,58 @@ static func touched_paths(actions: Array) -> PackedStringArray:
 static func _transfer(a: Dictionary, remove_source: bool) -> String:
 	if not FileAccess.file_exists(a.from):
 		return "skipped %s — missing" % a.from
+	# Never clobber. An existing destination is usually the benign case — a sidecar shared with
+	# an asset copied here earlier — and overwriting it on a MOVE would destroy that file and
+	# then delete the source that could have restored it. One ordinary accident, two files gone.
+	if FileAccess.file_exists(a.to):
+		return "skipped %s — %s already exists" % [a.from, a.to]
 	DirAccess.make_dir_recursive_absolute(a.to.get_base_dir())
 	var err := DirAccess.copy_absolute(a.from, a.to)
 	if err != OK:
 		return "FAILED %s -> %s (error %d)" % [a.from, a.to, err]
-	_carry_import(a, remove_source)
+	var carried := _carry_import(a, remove_source)
+	if not carried.is_empty():
+		return carried
 	if remove_source:
 		DirAccess.remove_absolute(a.from)
 		return "moved %s -> %s" % [a.from, a.to]
 	return "copied %s -> %s" % [a.from, a.to]
 
 
-static func _carry_import(a: Dictionary, remove_source: bool) -> void:
+## Returns "" on success, or a report line describing the failure. On failure the source is
+## left untouched: an asset whose .import did not follow is recoverable, one deleted from its
+## only home is not.
+static func _carry_import(a: Dictionary, remove_source: bool) -> String:
 	# A .bin has no .import, and that is not an error.
 	var from_import: String = a.from + ".import"
 	if not FileAccess.file_exists(from_import):
-		return
-	_write(a.to + ".import", ImportFile.reconcile(FileAccess.get_file_as_string(from_import), a.from, a.to, a.keep_uid))
+		return ""
+	var text := ImportFile.reconcile(FileAccess.get_file_as_string(from_import), a.from, a.to, a.keep_uid)
+	var err := _write(a.to + ".import", text)
+	if err != OK:
+		return "FAILED %s.import -> %s.import (error %d)" % [a.from, a.to, err]
 	if remove_source:
 		DirAccess.remove_absolute(from_import)
+	return ""
 
 
 static func _reconcile_only(a: Dictionary) -> String:
 	var import_path: String = a.to + ".import"
 	if not FileAccess.file_exists(import_path):
 		return "skipped %s — no .import to reconcile" % a.to
-	_write(import_path, ImportFile.reconcile(FileAccess.get_file_as_string(import_path), a.from, a.to, a.keep_uid))
+	var text := ImportFile.reconcile(FileAccess.get_file_as_string(import_path), a.from, a.to, a.keep_uid)
+	var err := _write(import_path, text)
+	if err != OK:
+		return "FAILED reconciling %s (error %d)" % [import_path, err]
 	return "reconciled %s" % a.to
 
 
-static func _write(path: String, text: String) -> void:
+## FileAccess.open() returns null on failure; calling store_string() on that is an unhandled
+## script error, not an exception this can catch — so the null check is the error handling.
+static func _write(path: String, text: String) -> Error:
 	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		return FileAccess.get_open_error()
 	f.store_string(text)
 	f.close()
+	return OK
