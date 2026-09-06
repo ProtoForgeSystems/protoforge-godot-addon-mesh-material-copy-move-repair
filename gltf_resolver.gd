@@ -15,10 +15,14 @@ func collect(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		out.skipped.append({"uri": path, "reason": "unreadable"})
 		return out
-	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if typeof(parsed) != TYPE_DICTIONARY:
+	# JSON.parse_string() ERR_PRINTs on every failure; the instance API returns the same error
+	# code silently. A malformed .gltf is a case this resolver handles by design, so it must not
+	# spam the Output panel of every project that happens to contain one.
+	var json := JSON.new()
+	if json.parse(FileAccess.get_file_as_string(path)) != OK or typeof(json.data) != TYPE_DICTIONARY:
 		out.skipped.append({"uri": path, "reason": "malformed glTF JSON"})
 		return out
+	var parsed: Dictionary = json.data
 
 	var base := path.get_base_dir()
 	var seen := {}
