@@ -57,6 +57,9 @@ func _init() -> void:
 	_check(not copied.contains("uid="), "copy: uid dropped so Godot mints a fresh one")
 	_check(copied.contains('source_file="res://new/dir/t.png"'), "copy: source_file repointed")
 	_check(copied.contains("compress/mode=2"), "copy: tuned params survive")
+	_check(not copied.contains("type="), "copy: type dropped — nothing claims a resource that has no artifact yet")
+	_check(copied.contains('importer="texture"'), "copy: importer survives, so Godot knows how to import it")
+	_check(moved.contains('type="CompressedTexture2D"'), "move: type kept — its uid still resolves to the existing artifact")
 
 	# A scene .import (a .gltf's) has a bare `path=` rather than the per-format variants.
 	var scene_import := "[remap]\n\nimporter=\"scene\"\nuid=\"uid://abc\"\npath=\"res://.godot/imported/m.gltf-dead.scn\"\n\n[deps]\n\nsource_file=\"res://old/m.gltf\"\ndest_files=[\"res://.godot/imported/m.gltf-dead.scn\"]\n\n[params]\n\nnodes/root_scale=1.0\n"

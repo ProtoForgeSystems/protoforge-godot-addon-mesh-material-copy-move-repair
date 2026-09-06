@@ -2,9 +2,14 @@ extends RefCounted
 ## Rewrites a .import file so it belongs to a relocated or duplicated asset.
 ##
 ## Two rules carry all the risk:
-##   MOVE keeps the uid — scenes and resources elsewhere reference this file by uid.
-##   COPY drops it, so Godot mints a fresh one. Two files sharing a uid makes the engine load
-##   whichever it resolves first, silently, and rewrite paths to match on the next save.
+##   MOVE keeps the uid and `type=` — scenes and resources elsewhere reference this file by uid,
+##   and the uid still resolves to the artifact that already exists.
+##   COPY drops both, so Godot mints a fresh uid and a fresh `type=` on reimport. Two files
+##   sharing a uid makes the engine load whichever it resolves first, silently, and rewrite paths
+##   to match on the next save. A copy also has no imported artifact yet, so leaving `type=` in
+##   place declares a known resource type the editor cannot load — it logs "Failed loading
+##   resource" for it until the reimport lands. `importer=` is left alone either way, so Godot
+##   still knows how to (re)import the file.
 ## Both drop the artifact keys (`path`, `path.*`, `dest_files`), because the imported artifact's
 ## filename embeds an md5 of the source path; a stale one aims the asset at another file's artifact.
 ## Everything else is preserved verbatim, which is the point of editing rather than deleting:
@@ -26,7 +31,12 @@ static func reconcile(text: String, old_source: String, new_source: String, keep
 		var stripped := line.strip_edges(true, false)
 		if _is_dropped(stripped):
 			continue
-		if not keep_uid and stripped.begins_with("uid="):
+		if not keep_uid and (stripped.begins_with("uid=") or stripped.begins_with("type=")):
+			# A copy has no imported artifact yet. Dropping the uid alone leaves the .import
+			# still declaring a resource of a known type that cannot be loaded, and the editor
+			# logs "Failed loading resource" for each one before the reimport lands. A move does
+			# not hit this: it keeps its uid, which still resolves to the old artifact.
+			# Godot regenerates type= from importer= on import (measured, 2026-09-06).
 			continue
 		out.append(line.replace(quoted_old, quoted_new))
 	return "\n".join(out)
