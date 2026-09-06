@@ -119,7 +119,9 @@ func _run(mode: int, from: String, to: String) -> void:
 	var read_from := to if mode == Plan.Mode.MOVE else from
 	var uri_base := from.get_base_dir() if mode == Plan.Mode.MOVE else ""
 	var found: Dictionary = resolver.collect(read_from, uri_base)
-	if found.sidecars.is_empty() and found.skipped.is_empty():
+	# Nothing to say about a dependency-free asset on a move or a repair — but a copy was asked
+	# for explicitly, so it still has to happen.
+	if found.sidecars.is_empty() and found.skipped.is_empty() and mode != Plan.Mode.COPY:
 		return
 
 	var is_shared := SharedLookup.make(_resolvers, efs.get_filesystem(), read_from)

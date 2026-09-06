@@ -75,9 +75,24 @@ func _init() -> void:
 			all_repair = false
 	_check(all_repair, "repair: every action reconciles in place and keeps its uid")
 
-	# No sidecars at all — a .glb, or a glTF with everything embedded.
+	# No sidecars at all on a MOVE — the dock already relocated the file, nothing to reconcile.
 	got = Plan.build(Plan.Mode.MOVE, "res://kit/m.gltf", "res://dest/m.gltf", PackedStringArray(), _nothing_shared)
 	_check(got.actions.is_empty(), "no sidecars: no actions at all, the addon stays out of the way")
+
+	# A copy of a dependency-free asset — a self-contained .glb, most commonly — must still
+	# copy the asset. Doing nothing is not an answer to a menu item the user chose.
+	got = Plan.build(Plan.Mode.COPY, "res://kit/m.glb", "res://dest/m.glb", PackedStringArray(), _nothing_shared)
+	_check(got.actions.size() == 1, "copy with no sidecars still copies the asset (got %d)" % got.actions.size())
+	# .get() with a default, not dot-access: on the unfixed build got.actions is empty, so
+	# _find returns {} here, and dot-access on a missing key is a hard SCRIPT ERROR in GDScript
+	# (not a soft null) -- which aborts _init() before quit() runs and hangs the runner forever.
+	var lone: Dictionary = _find(got.actions, "res://kit/m.glb")
+	_check(lone.get("op", -1) == Plan.Op.COPY, "copy with no sidecars: the action is a copy")
+	_check(not lone.get("keep_uid", true), "copy with no sidecars: the copy still gets a fresh uid")
+
+	# Move and repair are unaffected: there is genuinely nothing for them to do.
+	_check(Plan.build(Plan.Mode.MOVE, "res://kit/m.glb", "res://dest/m.glb", PackedStringArray(), _nothing_shared).actions.is_empty(), "move with no sidecars still does nothing")
+	_check(Plan.build(Plan.Mode.REPAIR, "res://kit/m.glb", "res://kit/m.glb", PackedStringArray(), _nothing_shared).actions.is_empty(), "repair with no sidecars still does nothing")
 
 	# A sidecar in a subdirectory keeps its subpath, or the moved asset's relative URI stops
 	# resolving -- and the move then deletes the only copy that could have repaired it.

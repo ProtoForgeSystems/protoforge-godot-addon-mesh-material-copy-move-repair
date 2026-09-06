@@ -15,8 +15,10 @@ static func build(
 	is_shared: Callable
 ) -> Dictionary:
 	var out := {"actions": [], "notes": []}
-	# An asset with no sidecars is not this addon's business — a .glb, or a fully embedded glTF.
-	if sidecars.is_empty():
+	# An asset with no sidecars is not this addon's business on a MOVE (the dock already moved
+	# it) or a REPAIR (there is nothing to reconcile) — but a COPY was explicitly asked for, and
+	# copying nothing is not an answer. A self-contained .glb is the common case here.
+	if sidecars.is_empty() and mode != Mode.COPY:
 		return out
 
 	var dest_dir := primary_to.get_base_dir()
