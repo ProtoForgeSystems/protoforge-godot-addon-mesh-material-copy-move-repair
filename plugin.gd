@@ -127,10 +127,17 @@ func _run(mode: int, from: String, to: String) -> void:
 		_busy = true
 		report = Executor.apply(plan.actions)
 		_busy = false
-		var touched := Executor.touched_paths(plan.actions)
-		for path in touched:
-			efs.update_file(path)
-		efs.reimport_files(touched)
+		# Only files Godot actually imports have a .import sibling. Handing it anything else --
+		# a .bin, notably -- makes it log "BUG: File queued for import, but can't be imported,
+		# importer for type '' not found" on every single move, which reads as this addon being
+		# broken. Measured in the editor, 2026-09-06.
+		var importable := PackedStringArray()
+		for path in Executor.touched_paths(plan.actions):
+			if FileAccess.file_exists(path + ".import"):
+				importable.append(path)
+				efs.update_file(path)
+		if not importable.is_empty():
+			efs.reimport_files(importable)
 
 	print_rich("[b]Sidecar[/b] %s %s" % [Plan.Mode.keys()[mode].to_lower(), to])
 	for line in report:
