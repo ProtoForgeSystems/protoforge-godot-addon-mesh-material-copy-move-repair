@@ -1,4 +1,4 @@
-# Mesh+Material Copy/Move/Repair
+# ProtoForge Mesh+Material Copy/Move/Repair
 
 A Godot 4.4+ editor addon that moves and copies `.gltf` and `.glb` files
 together with the `.bin` and textures they depend on.
@@ -26,7 +26,7 @@ This is an open gap in the engine, not an opinion — see
 
 ## Install
 
-**From the Asset Library:** search for "Mesh+Material Copy/Move/Repair" in
+**From the Asset Library:** search for "ProtoForge Mesh+Material Copy/Move/Repair" in
 Godot's AssetLib tab and install it directly into your project.
 
 **Manually:** clone or download this repository into
