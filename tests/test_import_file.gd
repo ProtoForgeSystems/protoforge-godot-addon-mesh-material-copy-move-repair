@@ -65,8 +65,15 @@ func _init() -> void:
 	_check(scene_moved.contains("nodes/root_scale=1.0"), "scene: params survive")
 	_check(scene_moved.contains('uid="uid://abc"'), "scene move: uid preserved")
 
-	# Idempotence: reconciling an already-reconciled file changes nothing further.
-	_check(ImportFile.reconcile(moved, "res://new/dir/t.png", "res://new/dir/t.png", true) == moved, "reconcile is idempotent")
+	# A path that merely shares a prefix with the one being moved must be left alone --
+	# roughness/src_normal can legitimately name a different file from source_file.
+	var prefix_sample := "[deps]\n\nsource_file=\"res://kit/t.png\"\n\n[params]\n\nroughness/src_normal=\"res://kit/t.png_alt.png\"\n"
+	var prefixed: String = ImportFile.reconcile(prefix_sample, "res://kit/t.png", "res://dst/t.png", true)
+	_check(prefixed.contains('source_file="res://dst/t.png"'), "prefix: the moved path is repointed")
+	_check(prefixed.contains('roughness/src_normal="res://kit/t.png_alt.png"'), "prefix: a longer path sharing its prefix is left alone")
+
+	# Idempotence as a real accidental double-run looks: the same move applied twice.
+	_check(ImportFile.reconcile(moved, "res://old/dir/t.png", "res://new/dir/t.png", true) == moved, "reconcile is idempotent under a repeated move")
 
 	print("import_file tests: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)

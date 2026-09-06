@@ -14,6 +14,13 @@ const _DROPPED_PREFIXES := ["path=", "path.", "dest_files="]
 
 
 static func reconcile(text: String, old_source: String, new_source: String, keep_uid: bool) -> String:
+	# Every path in a .import is quoted, so the replacement is anchored to the quotes. A bare
+	# substring replace would also rewrite any path that merely SHARES A PREFIX with the one
+	# being moved -- and `roughness/src_normal` legitimately names a different file from
+	# `source_file`, so a sibling's reference would be silently repointed at a file that is
+	# not moving.
+	var quoted_old := '"%s"' % old_source
+	var quoted_new := '"%s"' % new_source
 	var out := PackedStringArray()
 	for line in text.split("\n"):
 		var stripped := line.strip_edges(true, false)
@@ -21,7 +28,7 @@ static func reconcile(text: String, old_source: String, new_source: String, keep
 			continue
 		if not keep_uid and stripped.begins_with("uid="):
 			continue
-		out.append(line.replace(old_source, new_source))
+		out.append(line.replace(quoted_old, quoted_new))
 	return "\n".join(out)
 
 
