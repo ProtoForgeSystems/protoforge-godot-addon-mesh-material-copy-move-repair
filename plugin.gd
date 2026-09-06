@@ -119,9 +119,12 @@ func _run(mode: int, from: String, to: String) -> void:
 	var read_from := to if mode == Plan.Mode.MOVE else from
 	var uri_base := from.get_base_dir() if mode == Plan.Mode.MOVE else ""
 	var found: Dictionary = resolver.collect(read_from, uri_base)
-	# Nothing to say about a dependency-free asset on a move or a repair — but a copy was asked
-	# for explicitly, so it still has to happen.
-	if found.sidecars.is_empty() and found.skipped.is_empty() and mode != Plan.Mode.COPY:
+	# Only a MOVE stays silent about a dependency-free asset: it fires on every dock drag, and
+	# saying "nothing to do" each time would be noise. A COPY and a REPAIR were both asked for
+	# explicitly by picking a menu item, and an empty Output panel cannot be told apart from a
+	# dead menu item — which, for an addon whose failures all present as "nothing happened", is
+	# the one thing worth spending a line on.
+	if found.sidecars.is_empty() and found.skipped.is_empty() and mode == Plan.Mode.MOVE:
 		return
 
 	var is_shared := SharedLookup.make(_resolvers, efs.get_filesystem(), read_from)
@@ -148,6 +151,9 @@ func _run(mode: int, from: String, to: String) -> void:
 		print("  note: " + note)
 	for s in found.skipped:
 		print("  skipped %s — %s" % [s.uri, s.reason])
+
+	if report.is_empty() and plan.notes.is_empty() and found.skipped.is_empty():
+		print("  nothing to do — this asset references no external files")
 
 	if not plan.actions.is_empty():
 		# Only files Godot actually imports have a .import sibling. Handing it anything else --

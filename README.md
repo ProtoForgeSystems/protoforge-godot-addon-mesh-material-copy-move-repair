@@ -44,7 +44,7 @@ Two more actions live on the file's right-click menu:
 
 - **Copy with dependencies…** — copies the asset and everything it
   references, minting fresh uids so no two files on disk ever share one.
-- **Repair sidecars** — fixes an asset a past move already broke.
+- **Repair mesh/model** — fixes an asset a past move already broke.
 
 ## Features
 
