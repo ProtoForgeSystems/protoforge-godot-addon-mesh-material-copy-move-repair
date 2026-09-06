@@ -92,11 +92,13 @@ editor before concluding it didn't.
 
 ## For ProtoForge repos
 
-Development happens in `ProtoForgeSystems/unreal-assets`, which carries the
-test suite (`tests/`, `run_tests.sh`) against real glTF fixtures. Changes
-are made there, committed and pushed to this repo, and consuming repos then
-bump their submodule pointer — this addon takes no local changes anywhere
-downstream of here.
+The test suite (`tests/`, `run_tests.sh`) lives in this repository,
+excluded from the packaged zip. It must be run from inside a host Godot
+project that mounts this addon at `<project>/addons/sidecar`, where it
+finds `project.godot` two directories up. `ProtoForgeSystems/unreal-assets`
+is the development host that provides that project. Changes are made and
+committed here, and consuming repos then bump their submodule pointer —
+this addon takes no local changes anywhere downstream of here.
 
 Mount as a git submodule at `addons/sidecar` (or `game/addons/sidecar` when
 the Godot project is nested), then enable `res://addons/sidecar/plugin.cfg`
