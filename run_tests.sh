@@ -24,7 +24,7 @@ if [[ ! -f "$PROJECT/.godot/global_script_class_cache.cfg" || $missing_uid -eq 1
     PATH="/usr/bin:$PATH" "$GODOT_BIN" --headless --path "$PROJECT" --import --quit >/dev/null 2>&1 || true
 fi
 status=0
-for t in test_resolver_base; do
+for t in test_resolver_base test_gltf_resolver; do
     # Godot exits 0 when a script fails to LOAD -- a bad preload, a syntax error, or a name
     # typo'd in this loop all produce a silent green. Only a suite that ran to completion
     # prints its own "tests: PASS" line, so require it as well as the exit code.
