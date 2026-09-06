@@ -10,7 +10,7 @@ func can_handle(path: String) -> bool:
 	return path.get_extension().to_lower() == "gltf"
 
 
-func collect(path: String) -> Dictionary:
+func collect(path: String, uri_base_dir: String = "") -> Dictionary:
 	var out := {"sidecars": PackedStringArray(), "skipped": []}
 	if not FileAccess.file_exists(path):
 		out.skipped.append({"uri": path, "reason": "unreadable"})
@@ -24,7 +24,8 @@ func collect(path: String) -> Dictionary:
 		return out
 	var parsed: Dictionary = json.data
 
-	var base := path.get_base_dir()
+	# Not always the document's own directory -- see the base class docstring.
+	var base := uri_base_dir if not uri_base_dir.is_empty() else path.get_base_dir()
 	var seen := {}
 	for key in ["buffers", "images"]:
 		var entries: Variant = parsed.get(key, [])

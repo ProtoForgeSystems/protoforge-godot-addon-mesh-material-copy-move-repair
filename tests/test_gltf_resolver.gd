@@ -80,6 +80,15 @@ func _init() -> void:
 	got = r.collect(base.path_join("nope/absent.gltf"))
 	_check(got.sidecars.is_empty() and got.skipped.size() == 1, "unreadable gltf yields one note")
 
+	# The URI base can differ from where the document lives: after a dock move the .gltf sits at
+	# its new home while its sidecars are still at the old one.
+	Fixture.write_blob("split/src/m.bin")
+	var relocated := Fixture.write_gltf("split/dst/m.gltf", ["m.bin"], [])
+	got = r.collect(relocated)
+	_check(got.sidecars.is_empty(), "no override: the sidecar is not found at the document's new home")
+	got = r.collect(relocated, base.path_join("split/src"))
+	_check(got.sidecars.has(base.path_join("split/src/m.bin")), "uri_base_dir override finds the sidecar left behind")
+
 	Fixture.rm_rf(Fixture.DIR)
 	print("gltf_resolver tests: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)

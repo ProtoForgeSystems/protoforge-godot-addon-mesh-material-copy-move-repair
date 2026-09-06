@@ -106,25 +106,31 @@ func _run(mode: int, from: String, to: String) -> void:
 		_deferred.append({"mode": mode, "from": from, "to": to})
 		return
 
-	# On a move the file is already at its new home; read the glTF from wherever it now is.
+	# On a move the dock has already relocated the .gltf, but its sidecars are still in the OLD
+	# directory -- so read the document from its new home and resolve its URIs against the old
+	# one. Resolving against the new directory finds nothing at all, every sidecar reports
+	# "missing file", and the addon silently does nothing. Measured, 2026-09-06.
 	var read_from := to if mode == Plan.Mode.MOVE else from
-	var found: Dictionary = resolver.collect(read_from)
+	var uri_base := from.get_base_dir() if mode == Plan.Mode.MOVE else ""
+	var found: Dictionary = resolver.collect(read_from, uri_base)
 	if found.sidecars.is_empty() and found.skipped.is_empty():
 		return
 
 	var is_shared := SharedLookup.make(_resolvers, efs.get_filesystem(), read_from)
 	var plan: Dictionary = Plan.build(mode, from, to, found.sidecars, is_shared)
-	if plan.actions.is_empty():
-		return
 
-	_busy = true
-	var report: Array = Executor.apply(plan.actions)
-	_busy = false
-
-	var touched := Executor.touched_paths(plan.actions)
-	for path in touched:
-		efs.update_file(path)
-	efs.reimport_files(touched)
+	# No early return on an empty plan: a Repair whose sidecars are genuinely missing produces
+	# no actions, and returning here left the user staring at an empty Output panel after
+	# explicitly asking for a repair. The skipped lines below are the answer they wanted.
+	var report: Array = []
+	if not plan.actions.is_empty():
+		_busy = true
+		report = Executor.apply(plan.actions)
+		_busy = false
+		var touched := Executor.touched_paths(plan.actions)
+		for path in touched:
+			efs.update_file(path)
+		efs.reimport_files(touched)
 
 	print_rich("[b]Sidecar[/b] %s %s" % [Plan.Mode.keys()[mode].to_lower(), to])
 	for line in report:

@@ -50,7 +50,12 @@ static func _transfer(a: Dictionary, remove_source: bool) -> String:
 	if not carried.is_empty():
 		return carried
 	if remove_source:
-		DirAccess.remove_absolute(a.from)
+		# A source that could not be removed leaves a copy, not a move -- and its .import is
+		# already gone, so Godot would reimport it with default settings and silently drop
+		# whatever was tuned. Say what actually happened.
+		var rm := DirAccess.remove_absolute(a.from)
+		if rm != OK:
+			return "copied %s -> %s (source NOT removed, error %d)" % [a.from, a.to, rm]
 		return "moved %s -> %s" % [a.from, a.to]
 	return "copied %s -> %s" % [a.from, a.to]
 

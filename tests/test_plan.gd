@@ -78,5 +78,25 @@ func _init() -> void:
 	got = Plan.build(Plan.Mode.MOVE, "res://kit/m.gltf", "res://dest/m.gltf", PackedStringArray(), _nothing_shared)
 	_check(got.actions.is_empty(), "no sidecars: no actions at all, the addon stays out of the way")
 
+	# A sidecar in a subdirectory keeps its subpath, or the moved asset's relative URI stops
+	# resolving -- and the move then deletes the only copy that could have repaired it.
+	var nested := PackedStringArray(["res://kit/textures/diffuse.png"])
+	got = Plan.build(Plan.Mode.MOVE, "res://kit/m.gltf", "res://dest/m.gltf", nested, _nothing_shared)
+	_check(_find(got.actions, "res://kit/textures/diffuse.png").to == "res://dest/textures/diffuse.png", "a sidecar's subdirectory is preserved")
+
+	# A sidecar outside the asset's own directory (a "../" URI) is left where it is.
+	var outside := PackedStringArray(["res://shared/t.png"])
+	got = Plan.build(Plan.Mode.MOVE, "res://kit/m.gltf", "res://dest/m.gltf", outside, _nothing_shared)
+	_check(_find(got.actions, "res://shared/t.png").is_empty(), "a sidecar outside the asset's dir is not relocated")
+	var noted := false
+	for n in got.notes:
+		if n.contains("outside"):
+			noted = true
+	_check(noted, "leaving it in place is reported")
+
+	# Repair still reconciles a sidecar that lives outside the asset's directory.
+	got = Plan.build(Plan.Mode.REPAIR, "res://kit/m.gltf", "res://kit/m.gltf", outside, _nothing_shared)
+	_check(_find(got.actions, "res://shared/t.png").op == Plan.Op.RECONCILE, "repair reconciles an outside sidecar in place")
+
 	print("plan tests: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)

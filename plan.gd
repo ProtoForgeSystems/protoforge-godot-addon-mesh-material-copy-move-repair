@@ -20,6 +20,7 @@ static func build(
 		return out
 
 	var dest_dir := primary_to.get_base_dir()
+	var from_dir := primary_from.get_base_dir()
 
 	match mode:
 		Mode.MOVE:
@@ -31,12 +32,22 @@ static func build(
 			out.actions.append(_action(Op.RECONCILE, primary_from, primary_from, true))
 
 	for s in sidecars:
-		# Sidecars keep their filenames and land beside the primary, so the glTF's relative
-		# URIs stay valid and never need rewriting.
-		var to := dest_dir.path_join(s.get_file())
+		# Repair moves nothing, so it needs no destination at all.
+		if mode == Mode.REPAIR:
+			out.actions.append(_action(Op.RECONCILE, s, s, true))
+			continue
+		# Sidecars keep their path RELATIVE TO THE ASSET, so a texture in a textures/ subfolder
+		# lands in textures/ at the destination and the glTF's relative URI still resolves.
+		# Flattening to get_file() breaks the asset -- and on a move it then deletes the only
+		# copy that could have repaired it.
+		var rel := _relative(from_dir, s)
+		if rel.is_empty():
+			# A "../" URI: the file lives outside the asset's own directory, and relocating it
+			# would change what that URI resolves to. Leave it where it is and say so.
+			out.notes.append("%s is outside %s — left in place" % [s, from_dir])
+			continue
+		var to := dest_dir.path_join(rel)
 		match mode:
-			Mode.REPAIR:
-				out.actions.append(_action(Op.RECONCILE, s, s, true))
 			Mode.COPY:
 				out.actions.append(_action(Op.COPY, s, to, false))
 			Mode.MOVE:
@@ -51,3 +62,9 @@ static func build(
 
 static func _action(op: int, from: String, to: String, keep_uid: bool) -> Dictionary:
 	return {"op": op, "from": from, "to": to, "keep_uid": keep_uid}
+
+
+## A sidecar's path relative to the asset's own directory, or "" when it lives outside it.
+static func _relative(from_dir: String, path: String) -> String:
+	var prefix := from_dir if from_dir.ends_with("/") else from_dir + "/"
+	return path.substr(prefix.length()) if path.begins_with(prefix) else ""
