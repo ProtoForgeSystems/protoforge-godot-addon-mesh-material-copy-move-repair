@@ -1,13 +1,45 @@
 extends "res://addons/mesh_material_copy_move_repair/sidecar_resolver.gd"
-## Reads a .gltf's JSON and names the sibling files it references by relative URI: the external
-## buffer (.bin) and any external images. Godot's dependency graph cannot see these — they live in
-## the glTF document, not in the .import — which is why moving a .gltf in the dock breaks it.
+## Reads a .gltf's or .glb's JSON document and names the sibling files it references by relative
+## URI: the external buffer (.bin) and any external images. Godot's dependency graph cannot see
+## these — they live in the glTF document, not in the .import — which is why moving a .gltf in the
+## dock breaks it.
 ##
-## .glb is deliberately NOT handled: it embeds its buffers and images, so it has no sidecars.
+## .glb is handled too. Embedding is the exporter's CHOICE, not a property of the format: only
+## buffers[0] (the binary chunk) is required to be embedded in a .glb -- any further buffer, and
+## any image, may still legally carry an external uri. A .glb that does so is exactly as
+## vulnerable to a bare dock move as a .gltf; a .glb that embeds everything (the common case)
+## simply yields nothing here, and the addon stays out of its way.
 
 
 func can_handle(path: String) -> bool:
-	return path.get_extension().to_lower() == "gltf"
+	var ext := path.get_extension().to_lower()
+	return ext == "gltf" or ext == "glb"
+
+
+## Returns the glTF JSON document as text, or "" if the file is not a readable glTF.
+##
+## A .gltf IS the JSON. A .glb wraps it in a binary container: a 12-byte header (the "glTF"
+## magic, a version, the total length) then chunks, the first of which must be the JSON. Reading
+## it matters because a .glb is only self-contained by its exporter's CHOICE -- buffers[0] must
+## be embedded, but any further buffer and any image may legally name an external file, and
+## those are sidecars exactly like a .gltf's.
+static func _read_document(path: String) -> String:
+	if path.get_extension().to_lower() != "glb":
+		return FileAccess.get_file_as_string(path)
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null or f.get_length() < 20:
+		return ""
+	if f.get_buffer(4).get_string_from_ascii() != "glTF":
+		return ""
+	f.get_32()  # version
+	f.get_32()  # total length
+	var chunk_length := f.get_32()
+	var chunk_type := f.get_32()
+	if chunk_type != 0x4E4F534A:  # "JSON"
+		return ""
+	if chunk_length == 0 or chunk_length > f.get_length() - 20:
+		return ""
+	return f.get_buffer(chunk_length).get_string_from_utf8()
 
 
 func collect(path: String, uri_base_dir: String = "") -> Dictionary:
@@ -18,8 +50,9 @@ func collect(path: String, uri_base_dir: String = "") -> Dictionary:
 	# JSON.parse_string() ERR_PRINTs on every failure; the instance API returns the same error
 	# code silently. A malformed .gltf is a case this resolver handles by design, so it must not
 	# spam the Output panel of every project that happens to contain one.
+	var text := _read_document(path)
 	var json := JSON.new()
-	if json.parse(FileAccess.get_file_as_string(path)) != OK or typeof(json.data) != TYPE_DICTIONARY:
+	if text.is_empty() or json.parse(text) != OK or typeof(json.data) != TYPE_DICTIONARY:
 		out.skipped.append({"uri": path, "reason": "malformed glTF JSON"})
 		return out
 	var parsed: Dictionary = json.data

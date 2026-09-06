@@ -28,7 +28,8 @@ func _init() -> void:
 
 	_check(r.can_handle("res://a/b.gltf"), "handles .gltf")
 	_check(r.can_handle("res://a/b.GLTF"), "handles .gltf case-insensitively")
-	_check(not r.can_handle("res://a/b.glb"), "does not handle .glb")
+	_check(r.can_handle("res://a/b.glb"), "handles .glb")
+	_check(r.can_handle("res://a/b.GLB"), "handles .glb case-insensitively")
 	_check(not r.can_handle("res://a/b.png"), "does not handle .png")
 
 	# The ordinary case: one buffer, three textures, one of them named twice.
@@ -88,6 +89,24 @@ func _init() -> void:
 	_check(got.sidecars.is_empty(), "no override: the sidecar is not found at the document's new home")
 	got = r.collect(relocated, base.path_join("split/src"))
 	_check(got.sidecars.has(base.path_join("split/src/m.bin")), "uri_base_dir override finds the sidecar left behind")
+
+	# A .glb is self-contained only by its exporter's choice. One that embeds everything yields
+	# nothing, and the addon stays out of its way; one that names an external texture is exactly
+	# as vulnerable as a .gltf, and must be seen.
+	var embedded_glb := Fixture.write_glb("glb/embedded.glb", [null], [null])
+	got = r.collect(embedded_glb)
+	_check(got.sidecars.is_empty() and got.skipped.is_empty(), "an embedded .glb yields nothing, quietly")
+
+	Fixture.write_blob("glb/skin.png")
+	var external_glb := Fixture.write_glb("glb/external.glb", [null], ["skin.png"])
+	got = r.collect(external_glb)
+	_check(got.sidecars.has(base.path_join("glb/skin.png")), "a .glb's external texture is found")
+
+	# Anything that is not a real container must be refused, not crash.
+	got = r.collect(Fixture.write_raw("glb/garbage.glb", "this is not a GLB container at all"))
+	_check(got.sidecars.is_empty() and got.skipped.size() == 1, "a malformed .glb is reported, not fatal")
+	got = r.collect(Fixture.write_raw("glb/tiny.glb", "gl"))
+	_check(got.sidecars.is_empty() and got.skipped.size() == 1, "a truncated .glb is reported, not fatal")
 
 	Fixture.rm_rf(Fixture.DIR)
 	print("gltf_resolver tests: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))

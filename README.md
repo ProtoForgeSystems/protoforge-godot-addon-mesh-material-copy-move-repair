@@ -1,7 +1,7 @@
 # Mesh+Material Copy/Move/Repair
 
-A Godot 4.4+ editor addon that moves and copies `.gltf` files together with
-the `.bin` and textures they depend on.
+A Godot 4.4+ editor addon that moves and copies `.gltf` and `.glb` files
+together with the `.bin` and textures they depend on.
 
 ## The problem
 
@@ -11,6 +11,13 @@ those files at all. Drag the `.gltf` alone in the FileSystem dock and it
 moves alone, leaving its sidecars behind and the asset broken. Putting the
 missing file back does not fix it either: the failed import has already
 written a poisoned `.import`, and nothing invalidates that on its own.
+
+A `.glb` carries the identical JSON document, just wrapped in a binary
+container — embedding is its exporter's *choice*, not a property of the
+format. Only the first buffer is required to be embedded; any further
+buffer, and any image, may still legally name an external file. An
+exporter that does this hits the exact same broken-move bug, so `.glb` is
+in scope here too.
 
 This is an open gap in the engine, not an opinion — see
 [godotengine/godot#43043](https://github.com/godotengine/godot/issues/43043),
@@ -29,9 +36,9 @@ Then enable it under **Project > Project Settings > Plugins**.
 
 ## Quick start
 
-Drag a `.gltf` in the FileSystem dock, anywhere you'd normally drag a file.
-That's the whole feature — its `.bin` and textures follow, and nothing else
-about the gesture changes.
+Drag a `.gltf` or `.glb` in the FileSystem dock, anywhere you'd normally
+drag a file. That's the whole feature — its `.bin` and textures follow,
+and nothing else about the gesture changes.
 
 Two more actions live on the file's right-click menu:
 
@@ -50,12 +57,14 @@ Two more actions live on the file's right-click menu:
 
 ## How it works
 
-This addon parses the glTF's own `buffers` and `images` arrays for their URIs,
-carries the files they name alongside the primary asset, and rewrites each
-touched `.import` so the editor's reimport succeeds instead of poisoning
-itself. A move preserves each file's existing uid, so anything already
-referencing it keeps resolving; a copy mints a fresh uid instead, so the
-original and the copy never collide.
+This addon parses the glTF document's own `buffers` and `images` arrays for
+their URIs, carries the files they name alongside the primary asset, and
+rewrites each touched `.import` so the editor's reimport succeeds instead of
+poisoning itself. For a `.glb` it first unwraps the binary container to
+read the same JSON document out of its first chunk. A move preserves each
+file's existing uid, so anything already referencing it keeps resolving; a
+copy mints a fresh uid instead, so the original and the copy never
+collide.
 
 **The surprising case:** if another asset also references a sidecar, that
 sidecar is *copied*, not moved, even on a move of the primary asset. Moving
@@ -64,16 +73,19 @@ satisfy the one you dragged.
 
 **Repair's precondition:** Repair fixes a poisoned `.import` left by a bad
 move. It does not fetch anything that's missing. If the `.bin` or a texture
-is actually gone, put it back beside the `.gltf` first — then run Repair.
+is actually gone, put it back beside the `.gltf`/`.glb` first — then run
+Repair.
 
 ## Known limitations
 
-- `.glb` embeds its buffers and images, so it has no sidecars and is
-  ignored by design.
+- `.glb` is handled, not ignored. Most exporters embed everything, in
+  which case the addon finds nothing and does nothing. But a `.glb` that
+  names an external texture (or any buffer past the first) by URI is
+  carried exactly like a `.gltf`'s sidecar would be.
 - `.obj` / `.mtl` is not supported yet — the resolver interface exists for
   it, but no implementation is wired in.
 - Folder moves aren't hooked: dragging a folder carries the sidecars along
-  for free (the OS move does that), but the `.gltf`'s `.import` is not
+  for free (the OS move does that), but the asset's `.import` is not
   reconciled — run Repair on it afterward.
 - No undo. Every file the addon touches is listed in the Output panel.
 - A sidecar that lives outside the asset's own directory (a `../` URI) is
