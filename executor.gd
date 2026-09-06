@@ -1,10 +1,10 @@
 extends RefCounted
-## Performs the actions a SidecarPlan decided: moves and copies files, carries their .import
+## Performs the actions a Plan decided: moves and copies files, carries their .import
 ## siblings, and reconciles each one. Deliberately free of editor API so it can be tested headless;
 ## telling EditorFileSystem about the result is the caller's job (see touched_paths).
 
-const ImportFile := preload("res://addons/sidecar/import_file.gd")
-const Plan := preload("res://addons/sidecar/plan.gd")
+const ImportFile := preload("res://addons/mesh_material_copy_move_repair/import_file.gd")
+const Plan := preload("res://addons/mesh_material_copy_move_repair/plan.gd")
 
 
 static func apply(actions: Array) -> Array:

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Verifies the engine assumption behind sidecar's .import handling: an .import with uid=, path=
+# Verifies the engine assumption behind this addon's .import handling: an .import with uid=, path=
 # and dest_files= removed is reimported cleanly, those keys are regenerated, and every other
 # parameter survives. Runs in a throwaway project so it touches no repo.
 set -euo pipefail
 GODOT_BIN="${1:?godot binary path required}"
 PROBE="$(mktemp -d)"
 trap 'rm -rf "$PROBE"' EXIT
-printf 'config_version=5\n\n[application]\n\nconfig/name="sidecar probe"\n' > "$PROBE/project.godot"
+printf 'config_version=5\n\n[application]\n\nconfig/name="import probe"\n' > "$PROBE/project.godot"
 
 # A real 4x4 PNG, written by Godot itself so the file is genuinely importable.
 cat > "$PROBE/make.gd" <<'GD'

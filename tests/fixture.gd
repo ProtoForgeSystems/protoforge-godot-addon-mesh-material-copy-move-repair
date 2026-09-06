@@ -2,7 +2,7 @@ extends RefCounted
 ## Test-only: builds throwaway glTF assets under user://, so fixtures never dirty the host project,
 ## never reach its .import pipeline, and never trip its uid checks.
 
-const DIR := "user://sidecar_tests"
+const DIR := "user://mesh_material_cmr_tests"
 
 
 static func reset() -> String:

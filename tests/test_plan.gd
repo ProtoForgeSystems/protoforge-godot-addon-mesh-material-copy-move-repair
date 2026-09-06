@@ -2,7 +2,7 @@ extends SceneTree
 ## Headless: the move/copy/repair rules, including the shared-sidecar rule that keeps a move from
 ## breaking the assets it leaves behind.
 
-const Plan := preload("res://addons/sidecar/plan.gd")
+const Plan := preload("res://addons/mesh_material_copy_move_repair/plan.gd")
 
 var _failures := 0
 

@@ -1,4 +1,4 @@
-extends "res://addons/sidecar/sidecar_resolver.gd"
+extends "res://addons/mesh_material_copy_move_repair/sidecar_resolver.gd"
 ## Reads a .gltf's JSON and names the sibling files it references by relative URI: the external
 ## buffer (.bin) and any external images. Godot's dependency graph cannot see these — they live in
 ## the glTF document, not in the .import — which is why moving a .gltf in the dock breaks it.
@@ -60,7 +60,7 @@ func collect(path: String, uri_base_dir: String = "") -> Dictionary:
 ## Does its own "../" collapsing with an explicit segment walk rather than String.simplify_path().
 ## Measured (2026-09-06): simplify_path() does not treat "user://"/"res://" as a hard boundary --
 ## it clamps excess ".." segments instead of failing, so a URI with enough ".." climbs past the
-## root and lands back inside it. "user://sidecar_tests/esc".path_join("../../../../../../../../etc/passwd")
+## root and lands back inside it. "user://mesh_material_cmr_tests/esc".path_join("../../../../../../../../etc/passwd")
 ## .simplify_path() returns "user://etc/passwd", which still passes begins_with(root) and would
 ## silently resolve an escaping URI instead of rejecting it.
 static func _resolve(base_dir: String, uri: String) -> String:

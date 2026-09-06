@@ -1,19 +1,19 @@
 @tool
 extends EditorPlugin
-## Sidecar: carries a .gltf's .bin and textures through a FileSystem-dock move, copies an asset
-## with its dependencies, and repairs assets broken by a past move.
+## Mesh+Material Copy/Move/Repair: carries a .gltf's .bin and textures through a FileSystem-dock
+## move, copies an asset with its dependencies, and repairs assets broken by a past move.
 ##
 ## Godot's dependency graph cannot see a glTF's sidecars — they are named by relative URI inside
 ## the document — so the dock moves the .gltf alone and leaves a poisoned .import behind
 ## (godotengine/godot#43043). This reacts to the move rather than replacing it, because the dock's
 ## drag-and-drop is not overridable and `files_moved` gives us both paths exactly.
 
-const GltfResolver := preload("res://addons/sidecar/gltf_resolver.gd")
-const SharedLookup := preload("res://addons/sidecar/shared_lookup.gd")
-const Plan := preload("res://addons/sidecar/plan.gd")
-const Executor := preload("res://addons/sidecar/executor.gd")
-const ContextMenu := preload("res://addons/sidecar/context_menu.gd")
-const CopyDialog := preload("res://addons/sidecar/copy_dialog.gd")
+const GltfResolver := preload("res://addons/mesh_material_copy_move_repair/gltf_resolver.gd")
+const SharedLookup := preload("res://addons/mesh_material_copy_move_repair/shared_lookup.gd")
+const Plan := preload("res://addons/mesh_material_copy_move_repair/plan.gd")
+const Executor := preload("res://addons/mesh_material_copy_move_repair/executor.gd")
+const ContextMenu := preload("res://addons/mesh_material_copy_move_repair/context_menu.gd")
+const CopyDialog := preload("res://addons/mesh_material_copy_move_repair/copy_dialog.gd")
 
 var _resolvers := [GltfResolver.new()]
 var _menu: EditorContextMenuPlugin
@@ -139,7 +139,7 @@ func _run(mode: int, from: String, to: String) -> void:
 	# when they arrive ahead of the lines saying what was done and what was skipped. Printing
 	# first puts them in causal order: here is what changed, then here is what the engine made
 	# of it.
-	print_rich("[b]glTF Copy/Move/Repair[/b] %s %s" % [Plan.Mode.keys()[mode].to_lower(), to])
+	print_rich("[b]Mesh+Material Copy/Move/Repair[/b] %s %s" % [Plan.Mode.keys()[mode].to_lower(), to])
 	for line in report:
 		print("  " + line)
 	for note in plan.notes:

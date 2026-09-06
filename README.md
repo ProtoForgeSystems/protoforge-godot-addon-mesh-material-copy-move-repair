@@ -1,4 +1,4 @@
-# ProtoForge Sidecar
+# Mesh+Material Copy/Move/Repair
 
 A Godot 4.4+ editor addon that moves and copies `.gltf` files together with
 the `.bin` and textures they depend on.
@@ -19,11 +19,11 @@ This is an open gap in the engine, not an opinion — see
 
 ## Install
 
-**From the Asset Library:** search for "ProtoForge Sidecar" in Godot's
-AssetLib tab and install it directly into your project.
+**From the Asset Library:** search for "Mesh+Material Copy/Move/Repair" in
+Godot's AssetLib tab and install it directly into your project.
 
-**Manually:** clone or download this repository into `res://addons/sidecar`
-in your project.
+**Manually:** clone or download this repository into
+`res://addons/mesh_material_copy_move_repair` in your project.
 
 Then enable it under **Project > Project Settings > Plugins**.
 
@@ -50,7 +50,7 @@ Two more actions live on the file's right-click menu:
 
 ## How it works
 
-Sidecar parses the glTF's own `buffers` and `images` arrays for their URIs,
+This addon parses the glTF's own `buffers` and `images` arrays for their URIs,
 carries the files they name alongside the primary asset, and rewrites each
 touched `.import` so the editor's reimport succeeds instead of poisoning
 itself. A move preserves each file's existing uid, so anything already
@@ -79,6 +79,11 @@ is actually gone, put it back beside the `.gltf` first — then run Repair.
 - A sidecar that lives outside the asset's own directory (a `../` URI) is
   left where it is, and the report says so — relocating it would change
   what the URI resolves to.
+- The first time a repair or copy brings textures into a project, Godot may
+  log `Task 'reimport' already exists` alongside its own `detect_3d`
+  messages. That is the engine's first-use-in-3D reimport pass overlapping
+  the addon's; it is harmless and does not recur — running the same
+  operation again is clean.
 - Godot 4.4+.
 
 ## For contributors
@@ -94,14 +99,15 @@ editor before concluding it didn't.
 
 The test suite (`tests/`, `run_tests.sh`) lives in this repository,
 excluded from the packaged zip. It must be run from inside a host Godot
-project that mounts this addon at `<project>/addons/sidecar`, where it
-finds `project.godot` two directories up. `ProtoForgeSystems/unreal-assets`
+project that mounts this addon at `<project>/addons/mesh_material_copy_move_repair`,
+where it finds `project.godot` two directories up. `ProtoForgeSystems/unreal-assets`
 is the development host that provides that project. Changes are made and
 committed here, and consuming repos then bump their submodule pointer —
 this addon takes no local changes anywhere downstream of here.
 
-Mount as a git submodule at `addons/sidecar` (or `game/addons/sidecar` when
-the Godot project is nested), then enable `res://addons/sidecar/plugin.cfg`
+Mount as a git submodule at `addons/mesh_material_copy_move_repair` (or
+`game/addons/mesh_material_copy_move_repair` when the Godot project is
+nested), then enable `res://addons/mesh_material_copy_move_repair/plugin.cfg`
 under `[editor_plugins]` in `project.godot`.
 
 ## License

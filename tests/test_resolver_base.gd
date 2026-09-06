@@ -1,7 +1,7 @@
 extends SceneTree
 ## Headless: the resolver base class contract. Every resolver returns the same shape.
 
-const Resolver := preload("res://addons/sidecar/sidecar_resolver.gd")
+const Resolver := preload("res://addons/mesh_material_copy_move_repair/sidecar_resolver.gd")
 
 var _failures := 0
 

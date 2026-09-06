@@ -4,10 +4,10 @@ extends SceneTree
 ## seam between the resolver's output and the plan's assumptions, which is where the addon was
 ## silently doing nothing at all.
 
-const Fixture := preload("res://addons/sidecar/tests/fixture.gd")
-const GltfResolver := preload("res://addons/sidecar/gltf_resolver.gd")
-const Plan := preload("res://addons/sidecar/plan.gd")
-const Executor := preload("res://addons/sidecar/executor.gd")
+const Fixture := preload("res://addons/mesh_material_copy_move_repair/tests/fixture.gd")
+const GltfResolver := preload("res://addons/mesh_material_copy_move_repair/gltf_resolver.gd")
+const Plan := preload("res://addons/mesh_material_copy_move_repair/plan.gd")
+const Executor := preload("res://addons/mesh_material_copy_move_repair/executor.gd")
 
 var _failures := 0
 

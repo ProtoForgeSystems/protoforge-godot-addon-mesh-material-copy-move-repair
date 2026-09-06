@@ -1,8 +1,8 @@
 extends SceneTree
-## Headless: SidecarGltfResolver.collect() against the URI cases spec §2 enumerates.
+## Headless: GltfResolver.collect() against the URI cases spec §2 enumerates.
 
-const Fixture := preload("res://addons/sidecar/tests/fixture.gd")
-const GltfResolver := preload("res://addons/sidecar/gltf_resolver.gd")
+const Fixture := preload("res://addons/mesh_material_copy_move_repair/tests/fixture.gd")
+const GltfResolver := preload("res://addons/mesh_material_copy_move_repair/gltf_resolver.gd")
 
 var _failures := 0
 

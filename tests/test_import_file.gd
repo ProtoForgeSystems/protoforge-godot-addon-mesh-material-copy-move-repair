@@ -2,7 +2,7 @@ extends SceneTree
 ## Headless: the .import text transform. Move preserves uid, copy drops it, both drop artifact keys
 ## and repoint every occurrence of the old source path.
 
-const ImportFile := preload("res://addons/sidecar/import_file.gd")
+const ImportFile := preload("res://addons/mesh_material_copy_move_repair/import_file.gd")
 
 const SAMPLE := """[remap]
 
