@@ -20,10 +20,12 @@ var _menu: EditorContextMenuPlugin
 var _dialog: FileDialog
 var _busy := false
 var _pending: PackedStringArray
+var _deferred: Array = []
 
 
 func _enter_tree() -> void:
 	EditorInterface.get_file_system_dock().files_moved.connect(_on_files_moved)
+	EditorInterface.get_resource_filesystem().filesystem_changed.connect(_on_filesystem_changed)
 	_menu = ContextMenu.new()
 	_menu.handler = _on_menu
 	add_context_menu_plugin(EditorContextMenuPlugin.CONTEXT_SLOT_FILESYSTEM, _menu)
@@ -34,6 +36,8 @@ func _enter_tree() -> void:
 
 func _exit_tree() -> void:
 	EditorInterface.get_file_system_dock().files_moved.disconnect(_on_files_moved)
+	EditorInterface.get_resource_filesystem().filesystem_changed.disconnect(_on_filesystem_changed)
+	_deferred.clear()
 	remove_context_menu_plugin(_menu)
 	_menu = null
 	_dialog.queue_free()
@@ -70,10 +74,25 @@ func _on_copy_target_chosen(dir: String) -> void:
 
 
 func _on_files_moved(old_file: String, new_file: String) -> void:
-	# Our own transfers fire this signal too.
+	# Belt and braces. Executor moves files through DirAccess, which does not route through the
+	# dock and so cannot emit this signal -- but the guard costs nothing and the day some path
+	# does move a file through the dock, this is what stops the recursion.
 	if _busy:
 		return
 	_run(Plan.Mode.MOVE, old_file, new_file)
+
+
+## Drains the runs that arrived while the editor was mid-scan. One connection made in
+## _enter_tree and dropped in _exit_tree, rather than a bound one-shot per deferred run: the
+## EditorFileSystem is the editor's own long-lived object, so a per-run connection would
+## outlive the plugin being disabled and fire into a freed instance.
+func _on_filesystem_changed() -> void:
+	if _deferred.is_empty():
+		return
+	var queued := _deferred.duplicate()
+	_deferred.clear()
+	for r in queued:
+		_run(r.mode, r.from, r.to)
 
 
 func _run(mode: int, from: String, to: String) -> void:
@@ -82,8 +101,9 @@ func _run(mode: int, from: String, to: String) -> void:
 		return
 	var efs := EditorInterface.get_resource_filesystem()
 	if efs.is_scanning() or efs.is_importing():
-		# Retry once the editor is idle rather than racing its scan.
-		efs.filesystem_changed.connect(_run.bind(mode, from, to), CONNECT_ONE_SHOT)
+		# Retry once the editor is idle rather than racing its scan. Queued, not connected --
+		# see _on_filesystem_changed for why a per-run one-shot would leak past _exit_tree.
+		_deferred.append({"mode": mode, "from": from, "to": to})
 		return
 
 	# On a move the file is already at its new home; read the glTF from wherever it now is.
