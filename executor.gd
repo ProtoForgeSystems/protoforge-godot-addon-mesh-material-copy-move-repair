@@ -34,15 +34,47 @@ static func apply(actions: Array) -> Array:
 ## textures existed as resources -- "Failed loading resource", once per texture, on every single
 ## copy. A move looked clean only because its primary happens to be a RECONCILE. Measured in
 ## the editor, 2026-09-06.
+##
+## External destinations are omitted -- see is_external(). They are still copied; only the
+## notification to EditorFileSystem is skipped, and external_dirs() is what lets the caller
+## say so out loud.
 static func touched_paths(actions: Array) -> PackedStringArray:
 	var out := PackedStringArray()
 	var primary := PackedStringArray()
 	for a in actions:
+		if is_external(a.to):
+			continue
 		if a.get("primary", false):
 			primary.append(a.to)
 		else:
 			out.append(a.to)
 	out.append_array(primary)
+	return out
+
+
+## Whether a path lives outside Godot's virtual filesystem -- an absolute OS path, which is
+## what a copy into ANOTHER project's directory produces.
+##
+## Those are copied like any other destination but are never handed to EditorFileSystem, which
+## indexes res:// and nothing else. Nothing is lost by skipping it: the destination project
+## imports them on its own next scan, and Godot repoints the carried .import's source_file at
+## that project's res:// path by itself -- measured on 4.7.1, 2026-09-07, tuned import params
+## intact.
+static func is_external(path: String) -> bool:
+	return not path.begins_with("res://") and not path.begins_with("user://")
+
+
+## The external destination directories a run wrote to, de-duplicated and sorted, for the caller
+## to report. An addon whose whole failure surface is "nothing happened" has to say out loud
+## when it deliberately did not import something.
+static func external_dirs(actions: Array) -> PackedStringArray:
+	var seen := {}
+	for a in actions:
+		if not is_external(a.to):
+			continue
+		seen[String(a.to).get_base_dir()] = true
+	var out := PackedStringArray(seen.keys())
+	out.sort()
 	return out
 
 

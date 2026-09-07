@@ -62,10 +62,11 @@ func _on_menu(what: String, paths: PackedStringArray) -> Variant:
 			if paths.is_empty():
 				return null
 			_pending = paths
-			# Open where the asset lives, not at res://. A copy almost always lands in a
-			# sibling folder, and starting at the project root makes the user navigate back
-			# down to where they already were.
-			_dialog.current_dir = paths[0].get_base_dir()
+			# Open where the asset lives, not at the project root. A copy almost always lands
+			# in a sibling folder, and starting at the root makes the user navigate back down
+			# to where they already were. Globalized because the dialog is ACCESS_FILESYSTEM
+			# (see copy_dialog.gd) and does not resolve "res://".
+			_dialog.current_dir = ProjectSettings.globalize_path(paths[0].get_base_dir())
 			_dialog.popup_centered_ratio(0.5)
 		"repair":
 			for p in paths:
@@ -154,6 +155,13 @@ func _run(mode: int, from: String, to: String) -> void:
 
 	if report.is_empty() and plan.notes.is_empty() and found.skipped.is_empty():
 		print("  nothing to do — this asset references no external files")
+
+	# A copy into another project is the one case where the addon deliberately does LESS than
+	# usual: the files are written but nothing here imports them. Unsaid, that is indistinguish-
+	# able from the failure mode every other line in this block exists to rule out.
+	for dir in Executor.external_dirs(plan.actions):
+		print("  %s is outside this project — not imported here; the project that owns it will "
+			% dir + "import it on its next scan")
 
 	if not plan.actions.is_empty():
 		# Only files Godot actually imports have a .import sibling. Handing it anything else --
