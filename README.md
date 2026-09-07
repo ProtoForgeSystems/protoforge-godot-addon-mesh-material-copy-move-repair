@@ -44,12 +44,16 @@ Two more actions live on the file's right-click menu:
 
 - **Copy with dependencies…** — copies the asset and everything it
   references, minting fresh uids so no two files on disk ever share one.
+  The destination may be **another project**: pick any folder on disk, not
+  just one under `res://`.
 - **Repair mesh/model** — fixes an asset a past move already broke.
 
 ## Features
 
 - Dependencies follow a plain drag — no new gesture to learn.
 - Copy with dependencies, uid-safe.
+- Copy into another project — useful when a shared asset library feeds
+  several games and assets are promoted out of it one at a time.
 - Repair an already-broken asset.
 - A sidecar shared with another asset is copied rather than moved, so
   relocating one mesh's texture can't break every other mesh using it.
@@ -88,6 +92,21 @@ Repair.
   for free (the OS move does that), but the asset's `.import` is not
   reconciled — run Repair on it afterward.
 - No undo. Every file the addon touches is listed in the Output panel.
+- Copying **out of** a project works; copying **in from** a source outside
+  it does not. The resolver clamps a document's URIs to the root the
+  document lives under, so an outside source resolves no sidecars and the
+  copy would silently carry the `.gltf` alone — exactly the breakage this
+  addon exists to prevent. Run the copy from the project that owns the
+  source instead. (That clamp is a path-traversal guard; see the comment
+  on `gltf_resolver._resolve`.)
+- An asset copied to another project is written but not imported here —
+  `EditorFileSystem` only indexes `res://`. The owning project imports it
+  on its next scan, and Godot repoints the carried `.import`'s
+  `source_file` at that project's own `res://` path, keeping tuned import
+  parameters. The Output panel says when this happened.
+- An `.import` carrying a `_subresources` block that names absolute
+  `res://` paths (a bone map, say) will not resolve those in a different
+  project. The rest of the import settings survive.
 - A sidecar that lives outside the asset's own directory (a `../` URI) is
   left where it is, and the report says so — relocating it would change
   what the URI resolves to.

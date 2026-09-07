@@ -101,6 +101,49 @@ func _init() -> void:
 	var bare: Array = Executor.apply([{"op": Plan.Op.RECONCILE, "from": src.path_join("bare.png"), "to": dst.path_join("bare.png"), "keep_uid": true}])
 	_check(bare.is_empty(), "a reconcile with no .import says nothing — a .bin is not repairable")
 
+	# --- Copying OUT of the project, into another project's directory -------------------------
+	# The destination is a real OS path, which is what the ACCESS_FILESYSTEM picker returns. It
+	# is placed inside the fixture dir so rm_rf still cleans it.
+	var ext_dir := ProjectSettings.globalize_path(Fixture.DIR).path_join("ext")
+	_check(Executor.is_external(ext_dir), "an absolute OS path is external")
+	_check(not Executor.is_external("res://a/b.gltf"), "a res:// path is not external")
+	_check(not Executor.is_external("user://a/b.gltf"), "a user:// path is not external")
+
+	# EditorFileSystem indexes res:// and nothing else, so external destinations must not reach
+	# it -- while the in-project ones still come back, still with the primary last.
+	var mixed := [
+		{"op": Plan.Op.COPY, "from": src.path_join("x.gltf"), "to": ext_dir.path_join("x.gltf"), "keep_uid": false, "primary": true},
+		{"op": Plan.Op.COPY, "from": src.path_join("x.png"), "to": ext_dir.path_join("x.png"), "keep_uid": false},
+		{"op": Plan.Op.COPY, "from": src.path_join("in.png"), "to": dst.path_join("in.png"), "keep_uid": false},
+	]
+	var handed: PackedStringArray = Executor.touched_paths(mixed)
+	_check(handed.size() == 1 and handed[0].ends_with("in.png"), "external destinations are not handed to the editor")
+	var dirs: PackedStringArray = Executor.external_dirs(mixed)
+	_check(dirs.size() == 1 and dirs[0] == ext_dir, "external_dirs reports the directory once (got %s)" % str(dirs))
+	_check(Executor.external_dirs([mixed[2]]).is_empty(), "an all-in-project run reports no external dirs")
+
+	# ...and the copy itself really lands there, sidecar and .import included. This is the whole
+	# point: a library project copying an asset into a different project's kitbash.
+	Fixture.write_blob("src/out.png")
+	Fixture.write_blob("src/out.bin")
+	Fixture.write_raw("src/out.png.import", _import_for(src.path_join("out.png"), "uid://out1"))
+	var out_report: Array = Executor.apply([
+		{"op": Plan.Op.COPY, "from": src.path_join("out.png"), "to": ext_dir.path_join("out.png"), "keep_uid": false, "primary": true},
+		{"op": Plan.Op.COPY, "from": src.path_join("out.bin"), "to": ext_dir.path_join("out.bin"), "keep_uid": false},
+	])
+	_check(FileAccess.file_exists(ext_dir.path_join("out.png")), "the asset landed outside the project")
+	_check(FileAccess.file_exists(ext_dir.path_join("out.bin")), "its sidecar followed it out")
+	_check(FileAccess.file_exists(ext_dir.path_join("out.png.import")), "its .import was carried out")
+	var out_text := FileAccess.get_file_as_string(ext_dir.path_join("out.png.import"))
+	_check(not out_text.contains("uid://out1"), "the carried .import dropped the source uid — a copy must not share one")
+	_check(out_text.contains("compress/mode=2"), "the carried .import kept its tuned params")
+	_check(out_text.contains(ext_dir.path_join("out.png")), "the carried .import points at the new location")
+	var out_failures := 0
+	for line in out_report:
+		if not String(line).begins_with("copied"):
+			out_failures += 1
+	_check(out_failures == 0, "the external copy reported no failures (%s)" % str(out_report))
+
 	Fixture.rm_rf(Fixture.DIR)
 	print("executor tests: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
