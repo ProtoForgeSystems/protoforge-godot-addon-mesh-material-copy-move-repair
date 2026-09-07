@@ -17,9 +17,12 @@ extends FileDialog
 
 
 func _init() -> void:
-	title = "Copy with dependencies to…"
 	file_mode = FileDialog.FILE_MODE_OPEN_DIR
 	access = FileDialog.ACCESS_FILESYSTEM
+	# AFTER file_mode, never before: FileDialog's file_mode setter re-derives the title from the
+	# mode, so a title assigned first is silently replaced -- the dialog announced itself as
+	# "Open a Directory" for the whole of 1.0.0. Seen in the editor, 2026-09-07.
+	title = "Copy with dependencies to…"
 	# A real OS path, because ACCESS_FILESYSTEM does not resolve "res://". Overwritten per-copy
 	# by the caller; this is only what an unparented dialog would show.
 	current_dir = ProjectSettings.globalize_path("res://")
